@@ -25,3 +25,11 @@ app:
     kakao:
       rest-api-key: test-kakao-key
       redirect-uris: http://localhost:8080/api/v1/auth/kakao/redirect
+    naver:
+      client-id: test-naver-id
+      client-secret: test-naver-secret
+      redirect-uris: http://localhost:8080/api/v1/auth/naver/redirect
+    google:
+      client-id: test-google-id
+      client-secret: test-google-secret
+      redirect-uris: http://localhost:8080/api/v1/auth/google/redirect

@@ -1,4 +1,4 @@
-package com.kidschedule.api.auth.oauth.kakao;
+package com.kidschedule.api.auth.oauth.naver;
 
 import com.kidschedule.api.auth.oauth.OAuthRedirectSupport;
 import com.kidschedule.api.auth.oauth.OAuthStateStore;
@@ -7,27 +7,26 @@ import com.kidschedule.api.domain.enums.OAuthProvider;
 import com.kidschedule.api.web.dto.AuthResponse;
 import com.kidschedule.api.web.dto.AuthUrlResponse;
 import com.kidschedule.api.web.dto.OAuthCallbackRequest;
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
-public class KakaoOAuthService {
+public class NaverOAuthService {
 
-	private final KakaoOAuthProperties properties;
-	private final KakaoOAuthClient kakaoOAuthClient;
+	private final NaverOAuthProperties properties;
+	private final NaverOAuthClient naverOAuthClient;
 	private final OAuthStateStore oAuthStateStore;
 	private final OAuthUserProvisioner oAuthUserProvisioner;
 
-	public KakaoOAuthService(
-			KakaoOAuthProperties properties,
-			KakaoOAuthClient kakaoOAuthClient,
+	public NaverOAuthService(
+			NaverOAuthProperties properties,
+			NaverOAuthClient naverOAuthClient,
 			OAuthStateStore oAuthStateStore,
 			OAuthUserProvisioner oAuthUserProvisioner) {
 		this.properties = properties;
-		this.kakaoOAuthClient = kakaoOAuthClient;
+		this.naverOAuthClient = naverOAuthClient;
 		this.oAuthStateStore = oAuthStateStore;
 		this.oAuthUserProvisioner = oAuthUserProvisioner;
 	}
@@ -37,8 +36,8 @@ public class KakaoOAuthService {
 		String redirectUri = properties.resolveRedirectUri(requestedRedirectUri);
 		String returnUri = OAuthRedirectSupport.resolveReturnUri(requestedReturnUri);
 		String state = UUID.randomUUID().toString();
-		oAuthStateStore.saveState(state, OAuthProvider.KAKAO, redirectUri, returnUri);
-		return new AuthUrlResponse(kakaoOAuthClient.buildAuthorizeUrl(state, redirectUri), state);
+		oAuthStateStore.saveState(state, OAuthProvider.NAVER, redirectUri, returnUri);
+		return new AuthUrlResponse(naverOAuthClient.buildAuthorizeUrl(state, redirectUri), state);
 	}
 
 	public String buildRedirectBridge(String code, String state) {
@@ -50,42 +49,34 @@ public class KakaoOAuthService {
 		ensureConfigured();
 		var oauthState = oAuthStateStore.consumeState(request.state());
 
-		var tokenResponse = kakaoOAuthClient.exchangeCodeForToken(request.code(), oauthState.redirectUri());
+		var tokenResponse =
+				naverOAuthClient.exchangeCodeForToken(request.code(), request.state(), oauthState.redirectUri());
 		if (tokenResponse == null || !StringUtils.hasText(tokenResponse.accessToken())) {
-			throw new IllegalStateException("Failed to exchange Kakao authorization code");
+			throw new IllegalStateException("Failed to exchange Naver authorization code");
 		}
 
-		KakaoUserResponse kakaoUser = kakaoOAuthClient.fetchUser(tokenResponse.accessToken());
-		if (kakaoUser == null || kakaoUser.id() == null) {
-			throw new IllegalStateException("Failed to fetch Kakao user profile");
+		NaverUserResponse naverUser = naverOAuthClient.fetchUser(tokenResponse.accessToken());
+		if (naverUser == null || !StringUtils.hasText(naverUser.id())) {
+			throw new IllegalStateException("Failed to fetch Naver user profile");
 		}
 
 		return oAuthUserProvisioner.issueAuthResponse(
-				OAuthProvider.KAKAO, String.valueOf(kakaoUser.id()), resolveNickname(kakaoUser));
+				OAuthProvider.NAVER, naverUser.id(), resolveNickname(naverUser));
 	}
 
-	private String resolveNickname(KakaoUserResponse kakaoUser) {
-		if (kakaoUser.properties() != null) {
-			Object nickname = kakaoUser.properties().get("nickname");
-			if (nickname instanceof String value && StringUtils.hasText(value)) {
-				return value;
-			}
+	private String resolveNickname(NaverUserResponse naverUser) {
+		if (StringUtils.hasText(naverUser.nickname())) {
+			return naverUser.nickname();
 		}
-		if (kakaoUser.kakaoAccount() != null) {
-			if (kakaoUser.kakaoAccount().profile() != null
-					&& StringUtils.hasText(kakaoUser.kakaoAccount().profile().nickname())) {
-				return kakaoUser.kakaoAccount().profile().nickname();
-			}
-			if (StringUtils.hasText(kakaoUser.kakaoAccount().nickname())) {
-				return kakaoUser.kakaoAccount().nickname();
-			}
+		if (StringUtils.hasText(naverUser.name())) {
+			return naverUser.name();
 		}
 		return null;
 	}
 
 	private void ensureConfigured() {
-		if (!StringUtils.hasText(properties.getRestApiKey())) {
-			throw new IllegalStateException("Kakao OAuth is not configured (KAKAO_REST_API_KEY)");
+		if (!StringUtils.hasText(properties.getClientId()) || !StringUtils.hasText(properties.getClientSecret())) {
+			throw new IllegalStateException("Naver OAuth is not configured (NAVER_CLIENT_ID/NAVER_CLIENT_SECRET)");
 		}
 	}
 }

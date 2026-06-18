@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { fetchCurrentUser, loginWithKakao, logout as logoutRequest } from '../services/auth';
+import { loginWithOAuthProvider, logout as logoutRequest, fetchCurrentUser } from '../services/auth';
 import { getAccessToken } from '../services/tokenStorage';
 
 const AuthContext = createContext(null);
@@ -34,9 +34,9 @@ export function AuthProvider({ children }) {
     restoreSession();
   }, [restoreSession]);
 
-  const login = useCallback(async () => {
+  const login = useCallback(async (provider) => {
     setError('');
-    const authResponse = await loginWithKakao();
+    const authResponse = await loginWithOAuthProvider(provider);
     setUser(authResponse.user);
     return authResponse;
   }, []);
