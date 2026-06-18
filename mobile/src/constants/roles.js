@@ -1,0 +1,5 @@
+export const MEMBER_ROLES = {
+  MASTER: 'MASTER',
+  FAMILY: 'FAMILY',
+  HELPER: 'HELPER',
+};

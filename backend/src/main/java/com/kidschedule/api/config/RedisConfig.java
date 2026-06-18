@@ -1,0 +1,23 @@
+package com.kidschedule.api.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+@Configuration
+@Profile("!test")
+public class RedisConfig {
+
+	public static final String INVITE_CODE_KEY_PREFIX = "invite:";
+
+	@Bean
+	public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
+		StringRedisTemplate template = new StringRedisTemplate(connectionFactory);
+		template.setKeySerializer(StringRedisSerializer.UTF_8);
+		template.setValueSerializer(StringRedisSerializer.UTF_8);
+		return template;
+	}
+}
