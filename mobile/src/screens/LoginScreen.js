@@ -10,12 +10,6 @@ import { AppHeader } from '../components/AppHeader';
 import { useAuth } from '../context/AuthContext';
 import { colors, spacing, typography } from '../theme';
 
-const LOGIN_OPTIONS = [
-  { provider: 'kakao', label: '카카오로 시작하기', buttonStyle: styles.kakaoButton, textStyle: styles.kakaoButtonText },
-  { provider: 'naver', label: '네이버로 시작하기', buttonStyle: styles.naverButton, textStyle: styles.naverButtonText },
-  { provider: 'google', label: 'Google로 시작하기', buttonStyle: styles.googleButton, textStyle: styles.googleButtonText },
-];
-
 export function LoginScreen() {
   const { login, error, setError } = useAuth();
   const [activeProvider, setActiveProvider] = useState(null);
@@ -129,3 +123,9 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
 });
+
+const LOGIN_OPTIONS = [
+  { provider: 'kakao', label: '카카오로 시작하기', buttonStyle: styles.kakaoButton, textStyle: styles.kakaoButtonText },
+  { provider: 'naver', label: '네이버로 시작하기', buttonStyle: styles.naverButton, textStyle: styles.naverButtonText },
+  { provider: 'google', label: 'Google로 시작하기', buttonStyle: styles.googleButton, textStyle: styles.googleButtonText },
+];

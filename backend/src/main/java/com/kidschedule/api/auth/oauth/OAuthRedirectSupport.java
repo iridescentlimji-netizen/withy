@@ -47,14 +47,19 @@ public final class OAuthRedirectSupport {
 				<!DOCTYPE html>
 				<html lang="ko">
 				<head>
+				<meta charset="utf-8">
 				<meta http-equiv="refresh" content="0;url=%s">
 				</head>
 				<body>
 				<p>앱으로 돌아가는 중...</p>
-				<script>window.location.replace('%s');</script>
+				<p><a id="app-link" href="%s">앱으로 돌아가기</a></p>
+				<script>
+				window.location.replace('%s');
+				document.getElementById('app-link').click();
+				</script>
 				</body>
 				</html>
 				"""
-				.formatted(escapedTarget, jsTarget);
+				.formatted(escapedTarget, escapedTarget, jsTarget);
 	}
 }

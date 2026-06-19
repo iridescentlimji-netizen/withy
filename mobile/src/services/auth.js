@@ -1,3 +1,4 @@
+import { makeRedirectUri } from 'expo-auth-session';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { API_BASE_URL } from '../config/env';
@@ -13,7 +14,7 @@ const PROVIDER_LABELS = {
 };
 
 function getAppReturnUri(provider) {
-  return Linking.createURL(`oauth/${provider}`);
+  return makeRedirectUri({ path: `oauth/${provider}` });
 }
 
 function readQueryParam(value) {
