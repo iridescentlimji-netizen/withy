@@ -90,8 +90,20 @@ Expo Go 앱(App Store, SDK 54)으로 QR 코드를 스캔하거나 `i` / `a` 로 
 | POST | `/api/v1/auth/kakao/callback` | code/state → JWT 발급 |
 | GET | `/api/v1/auth/me` | Bearer JWT로 현재 사용자 |
 
+## Documentation
+
+| Doc | Purpose |
+|-----|---------|
+| [`docs/project-context.md`](docs/project-context.md) | **Cursor 진입점** — 상태 요약, 실행 방법 |
+| [`docs/schedule-academy-plan.md`](docs/schedule-academy-plan.md) | 일정/학원/귀가 설계 & 구현 계획 |
+| [`docs/decisions.md`](docs/decisions.md) | 제품·아키텍처 결정 로그 |
+| [`docs/sso-setup-guide.md`](docs/sso-setup-guide.md) | SSO 콘솔 설정 |
+| [`AGENTS.md`](AGENTS.md) | AI Agent용 요약 |
+
+모바일 Cursor 새 채팅: *「docs/project-context.md 읽고 schedule-academy-plan Phase 1 구현해줘」*
+
 ## Next Steps
 
-1. Naver / Google OAuth (동일 패턴)
-2. Family / Child / Schedule API
-3. Screen implementation from Figma
+1. V6 migration — academies, schedule_series (see `docs/schedule-academy-plan.md`)
+2. Academy / Schedule / Home API
+3. Mobile: 홈·일정·학원관리 UI (Figma draft)

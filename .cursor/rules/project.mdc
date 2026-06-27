@@ -1,0 +1,17 @@
+---
+description: withy 프로젝트 — docs 우선 읽기
+alwaysApply: true
+---
+
+# withy (kid-schedule-app)
+
+작업 시작 전 **반드시** 읽을 것:
+
+1. `docs/project-context.md` — 현재 상태 요약
+2. `docs/schedule-academy-plan.md` — 일정/학원/귀가 구현 계획 (진행 중)
+
+필요 시: `docs/decisions.md`, `docs/sso-setup-guide.md`, `AGENTS.md`
+
+- `.env` / `mobile/.env`는 Git에 없음 → `.env.example` 참고
+- SSO·JWT는 이미 구현됨; 다음은 **V6 DB + Academy/Schedule API**
+- 채팅/플랜 파일(`.cursor/plans/`)보다 **`docs/`가 진실의 원천**
