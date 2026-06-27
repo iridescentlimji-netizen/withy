@@ -22,6 +22,8 @@ app:
   jwt:
     secret: test-jwt-secret-key-at-least-32-characters-long
   oauth:
+    security:
+      allowed-exp-hosts: 127.0.0.1,localhost
     kakao:
       rest-api-key: test-kakao-key
       redirect-uris: http://localhost:8080/api/v1/auth/kakao/redirect

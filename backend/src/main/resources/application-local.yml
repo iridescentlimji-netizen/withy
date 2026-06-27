@@ -21,6 +21,8 @@ app:
   jwt:
     secret: ${JWT_SECRET:local-dev-jwt-secret-key-at-least-32-chars}
   oauth:
+    security:
+      allowed-exp-hosts: ${OAUTH_ALLOWED_EXP_HOSTS:127.0.0.1,localhost,192.168.45.142}
     kakao:
       rest-api-key: ${KAKAO_REST_API_KEY:}
       client-secret: ${KAKAO_CLIENT_SECRET:}

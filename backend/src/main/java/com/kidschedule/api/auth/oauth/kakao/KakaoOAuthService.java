@@ -1,6 +1,7 @@
 package com.kidschedule.api.auth.oauth.kakao;
 
 import com.kidschedule.api.auth.oauth.OAuthRedirectSupport;
+import com.kidschedule.api.auth.oauth.OAuthReturnUriValidator;
 import com.kidschedule.api.auth.oauth.OAuthStateStore;
 import com.kidschedule.api.auth.oauth.OAuthUserProvisioner;
 import com.kidschedule.api.domain.enums.OAuthProvider;
@@ -10,7 +11,6 @@ import com.kidschedule.api.web.dto.OAuthCallbackRequest;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -20,22 +20,25 @@ public class KakaoOAuthService {
 	private final KakaoOAuthClient kakaoOAuthClient;
 	private final OAuthStateStore oAuthStateStore;
 	private final OAuthUserProvisioner oAuthUserProvisioner;
+	private final OAuthReturnUriValidator oAuthReturnUriValidator;
 
 	public KakaoOAuthService(
 			KakaoOAuthProperties properties,
 			KakaoOAuthClient kakaoOAuthClient,
 			OAuthStateStore oAuthStateStore,
-			OAuthUserProvisioner oAuthUserProvisioner) {
+			OAuthUserProvisioner oAuthUserProvisioner,
+			OAuthReturnUriValidator oAuthReturnUriValidator) {
 		this.properties = properties;
 		this.kakaoOAuthClient = kakaoOAuthClient;
 		this.oAuthStateStore = oAuthStateStore;
 		this.oAuthUserProvisioner = oAuthUserProvisioner;
+		this.oAuthReturnUriValidator = oAuthReturnUriValidator;
 	}
 
 	public AuthUrlResponse createAuthorizeUrl(String requestedRedirectUri, String requestedReturnUri) {
 		ensureConfigured();
 		String redirectUri = properties.resolveRedirectUri(requestedRedirectUri);
-		String returnUri = OAuthRedirectSupport.resolveReturnUri(requestedReturnUri);
+		String returnUri = oAuthReturnUriValidator.resolveReturnUri(requestedReturnUri, OAuthProvider.KAKAO);
 		String state = UUID.randomUUID().toString();
 		oAuthStateStore.saveState(state, OAuthProvider.KAKAO, redirectUri, returnUri);
 		return new AuthUrlResponse(kakaoOAuthClient.buildAuthorizeUrl(state, redirectUri), state);
@@ -45,10 +48,10 @@ public class KakaoOAuthService {
 		return OAuthRedirectSupport.buildRedirectBridge(oAuthStateStore, code, state);
 	}
 
-	@Transactional
 	public AuthResponse loginWithAuthorizationCode(OAuthCallbackRequest request) {
 		ensureConfigured();
 		var oauthState = oAuthStateStore.consumeState(request.state());
+		OAuthRedirectSupport.assertProvider(oauthState, OAuthProvider.KAKAO);
 
 		var tokenResponse = kakaoOAuthClient.exchangeCodeForToken(request.code(), oauthState.redirectUri());
 		if (tokenResponse == null || !StringUtils.hasText(tokenResponse.accessToken())) {

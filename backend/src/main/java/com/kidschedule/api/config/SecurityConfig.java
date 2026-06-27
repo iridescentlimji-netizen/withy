@@ -5,6 +5,7 @@ import com.kidschedule.api.auth.jwt.JwtProperties;
 import com.kidschedule.api.auth.oauth.google.GoogleOAuthProperties;
 import com.kidschedule.api.auth.oauth.kakao.KakaoOAuthProperties;
 import com.kidschedule.api.auth.oauth.naver.NaverOAuthProperties;
+import com.kidschedule.api.auth.oauth.OAuthSecurityProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableConfigurationProperties({
 	JwtProperties.class,
+	OAuthSecurityProperties.class,
 	KakaoOAuthProperties.class,
 	NaverOAuthProperties.class,
 	GoogleOAuthProperties.class

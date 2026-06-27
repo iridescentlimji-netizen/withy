@@ -1,5 +1,6 @@
 package com.kidschedule.api.auth.oauth;
 
+import com.kidschedule.api.domain.enums.OAuthProvider;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import org.springframework.util.StringUtils;
@@ -9,15 +10,10 @@ public final class OAuthRedirectSupport {
 	private OAuthRedirectSupport() {
 	}
 
-	public static String resolveReturnUri(String requestedReturnUri) {
-		if (!StringUtils.hasText(requestedReturnUri)) {
-			return null;
+	public static void assertProvider(OAuthState oauthState, OAuthProvider expectedProvider) {
+		if (oauthState.provider() != expectedProvider) {
+			throw new IllegalArgumentException("OAuth provider mismatch");
 		}
-		if (requestedReturnUri.startsWith("exp://")
-				|| requestedReturnUri.startsWith("kid-schedule://")) {
-			return requestedReturnUri;
-		}
-		throw new IllegalArgumentException("Invalid return URI");
 	}
 
 	public static String buildRedirectBridge(OAuthStateStore oAuthStateStore, String code, String state) {

@@ -1,6 +1,7 @@
 package com.kidschedule.api.auth.oauth.google;
 
 import com.kidschedule.api.auth.oauth.OAuthRedirectSupport;
+import com.kidschedule.api.auth.oauth.OAuthReturnUriValidator;
 import com.kidschedule.api.auth.oauth.OAuthStateStore;
 import com.kidschedule.api.auth.oauth.OAuthUserProvisioner;
 import com.kidschedule.api.domain.enums.OAuthProvider;
@@ -9,7 +10,6 @@ import com.kidschedule.api.web.dto.AuthUrlResponse;
 import com.kidschedule.api.web.dto.OAuthCallbackRequest;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -19,22 +19,25 @@ public class GoogleOAuthService {
 	private final GoogleOAuthClient googleOAuthClient;
 	private final OAuthStateStore oAuthStateStore;
 	private final OAuthUserProvisioner oAuthUserProvisioner;
+	private final OAuthReturnUriValidator oAuthReturnUriValidator;
 
 	public GoogleOAuthService(
 			GoogleOAuthProperties properties,
 			GoogleOAuthClient googleOAuthClient,
 			OAuthStateStore oAuthStateStore,
-			OAuthUserProvisioner oAuthUserProvisioner) {
+			OAuthUserProvisioner oAuthUserProvisioner,
+			OAuthReturnUriValidator oAuthReturnUriValidator) {
 		this.properties = properties;
 		this.googleOAuthClient = googleOAuthClient;
 		this.oAuthStateStore = oAuthStateStore;
 		this.oAuthUserProvisioner = oAuthUserProvisioner;
+		this.oAuthReturnUriValidator = oAuthReturnUriValidator;
 	}
 
 	public AuthUrlResponse createAuthorizeUrl(String requestedRedirectUri, String requestedReturnUri) {
 		ensureConfigured();
 		String redirectUri = properties.resolveRedirectUri(requestedRedirectUri);
-		String returnUri = OAuthRedirectSupport.resolveReturnUri(requestedReturnUri);
+		String returnUri = oAuthReturnUriValidator.resolveReturnUri(requestedReturnUri, OAuthProvider.GOOGLE);
 		String state = UUID.randomUUID().toString();
 		oAuthStateStore.saveState(state, OAuthProvider.GOOGLE, redirectUri, returnUri);
 		return new AuthUrlResponse(googleOAuthClient.buildAuthorizeUrl(state, redirectUri), state);
@@ -44,10 +47,10 @@ public class GoogleOAuthService {
 		return OAuthRedirectSupport.buildRedirectBridge(oAuthStateStore, code, state);
 	}
 
-	@Transactional
 	public AuthResponse loginWithAuthorizationCode(OAuthCallbackRequest request) {
 		ensureConfigured();
 		var oauthState = oAuthStateStore.consumeState(request.state());
+		OAuthRedirectSupport.assertProvider(oauthState, OAuthProvider.GOOGLE);
 
 		var tokenResponse = googleOAuthClient.exchangeCodeForToken(request.code(), oauthState.redirectUri());
 		if (tokenResponse == null || !StringUtils.hasText(tokenResponse.accessToken())) {
