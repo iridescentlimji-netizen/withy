@@ -1,76 +1,136 @@
-# Project Context (Cursor / 모바일 이어하기용)
+# Project Context (Cursor / PC·모바일 공용)
 
-> **새 Agent 채팅 시작 시:** 이 파일 + [`schedule-academy-plan.md`](schedule-academy-plan.md) 먼저 읽기.
+> **새 Agent 채팅 첫 메시지 예시:**  
+> `docs/project-context.md`와 `docs/status-and-todo.md`를 읽고, [작업 내용]을 진행해줘.
 
 ## 프로젝트
 
-- **이름:** withy (아이 스케줄 MVP)
-- **Repo:** https://github.com/iridescentlimji-netizen/withy.git
-- **구조:** `backend/` (Spring Boot 3.5) + `mobile/` (Expo SDK 54)
+| 항목 | 값 |
+|------|-----|
+| 이름 | withy (아이 스케줄 MVP) |
+| Repo | https://github.com/iridescentlimji-netizen/withy.git |
+| 구조 | `backend/` Spring Boot 3.5 + `mobile/` Expo SDK 54 |
+| DB | PostgreSQL + Flyway (V1–V7) |
+| Cache | Redis (OAuth state, 초대 코드 24h TTL) |
 
-## 완료된 것
+## Cursor Agent 진입 순서
+
+1. **[project-context.md](project-context.md)** — 이 파일 (요약)
+2. **[status-and-todo.md](status-and-todo.md)** — 진행 상태·TODO·미테스트 목록 (**작업 전 필수**)
+3. **[cursor-workflow.md](cursor-workflow.md)** — PC/모바일에서 Cursor로 개발하는 방법
+4. **[schedule-academy-plan.md](schedule-academy-plan.md)** — 일정/학원/귀가 설계
+5. **[decisions.md](decisions.md)** — 제품·아키텍처 결정 로그
+6. **[mobile-screens.md](mobile-screens.md)** — Figma ↔ 화면 ↔ API 매핑
+7. **[sso-setup-guide.md](sso-setup-guide.md)** — OAuth 콘솔 설정
+8. **[database-erd.md](database-erd.md)** — ERD·Redis 키
+9. **[../AGENTS.md](../AGENTS.md)** — Agent용 한 페이지 요약
+
+`.cursor/plans/` 등 채팅 산출물보다 **`docs/`가 진실의 원천**이다.
+
+---
+
+## 완료된 기능 (2026-06-28 기준)
 
 ### Backend
-- Flyway V1–V5 (users, oauth, families, children, schedules …) — **비즈니스 API는 아직 없음**
-- **SSO:** Kakao / Naver / Google + JWT
-- OAuth: HTTP redirect → bridge HTML → deep link → callback
-- SSO security: JWT secret 검증, returnUri allowlist, provider 검증, 테스트 17개
+
+- **Flyway V1–V7** — users, oauth, families, children, schedules, academies, schedule_series, 중복 일정 정리·유니크 인덱스
+- **SSO** — Kakao / Naver / Google → JWT (Bearer)
+- **OAuth 계정 연결** — 동일 사용자에 여러 provider 링크 (`OAuthAccountLinkService`)
+- **Family / Child** — 목록·생성
+- **Academy** — CRUD + 검색
+- **Schedule** — 1회·반복 생성, 일별 grouped list, calendar, 단건 조회/수정/취소
+- **반복 materialize** — `ScheduleSeriesMaterializer` (12주 horizon + 스크롤 시 롤링 생성, series 잠금)
+- **취소 scope** — `OCCURRENCE` / `FUTURE` (`FUTURE` 시 `effectiveUntil` 갱신)
+- **Series 수정 API** — `PUT .../schedules/series/{seriesId}`
+- **가족 초대** — 초대 코드(Redis), 가입 요청, 마스터 승인/거절
+- **Home** — now/next/todayCount + 오늘 PICKUP 요약
+- **테스트** — 27개 (`./gradlew test`)
 
 ### Mobile
+
 - LoginScreen (3 SSO), SecureStore JWT
-- HomeScreen: 로그인 사용자 + API health (목업 홈 UI 전)
+- 가족 bootstrap / **초대 코드로 참여**
+- FamilyContext (active family, load error retry)
+- 탭: **홈 / 일정 / 학원관리 / 마이**
+- 일정 주간 캘린더, 목록, **⋯ 메뉴 → 수정/삭제** (`ScheduleEditScreen`)
+- 일정 등록 (1회·반복·학원·귀가)
+- 학원 찾기 모달, 학원 CRUD, 아이 등록
+- **마이** — 닉네임, OAuth 연결, 가족 초대·승인 (마스터)
 
-### API (현재 동작)
-- `GET /api/v1/health`
-- `GET/POST /api/v1/auth/{kakao|naver|google}/url|redirect|callback`
-- `GET /api/v1/auth/me`
+---
 
-## 다음 작업 (확정 계획)
+## 주요 API
 
-→ **[`docs/schedule-academy-plan.md`](schedule-academy-plan.md)** 전체 참고
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/api/v1/health` | 헬스체크 |
+| * | `/api/v1/auth/*` | OAuth 로그인·연결·`/me` |
+| GET/POST | `/api/v1/families` | 가족 |
+| GET/POST | `/api/v1/families/{id}/children` | 아이 |
+| * | `/api/v1/families/{id}/academies` | 학원 CRUD |
+| POST/GET | `/api/v1/families/{id}/schedules` | 일정 |
+| GET | `/api/v1/families/{id}/schedules/calendar` | 월별 count |
+| PUT | `/api/v1/families/{id}/schedules/{scheduleId}` | occurrence 수정 |
+| POST | `/api/v1/families/{id}/schedules/{scheduleId}/cancel` | 취소 `{ scope: OCCURRENCE \| FUTURE }` |
+| PUT | `/api/v1/families/{id}/schedules/series/{seriesId}` | 반복 series 수정 |
+| POST | `/api/v1/families/{id}/invite-codes` | 초대 코드 (마스터) |
+| POST | `/api/v1/join-requests` | 가입 요청 |
+| GET | `/api/v1/families/{id}/join-requests` | 승인 대기 목록 |
+| POST | `/api/v1/families/{id}/join-requests/{id}/approve\|reject` | 승인/거절 |
+| GET | `/api/v1/home?familyId=` | 홈 대시보드 |
 
-1. **V6** — `academies`, `schedule_series`, `schedules` 확장
-2. Academy + Family/Child API
-3. Schedule series engine + Schedule API
-4. Home dashboard API
-5. Mobile: 홈/일정/학원관리 UI
-
-### 핵심 설계 (한 줄)
-- 학원 테이블 O / 귀가 = PICKUP / 반복 = series+occurrence / 이전일정 UI = 하이브리드
+---
 
 ## 로컬 실행
 
 ```bash
+# 1) 인프라
 docker compose up -d
-cd backend && ./gradlew bootRun   # .env 자동 로드
-cd mobile && npm run ios:dev      # 시뮬레이터 (OAuth)
-# 또는
-cd mobile && npm run start:simulator
+cp .env.example .env   # 루트 — OAuth 키 등
+
+# 2) 백엔드
+cd backend
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+./gradlew bootRun
+
+# 3) 모바일
+cd mobile
+cp .env.example .env   # 있으면
+npm install
+npm run start:simulator   # iOS 시뮬레이터
 ```
 
-- 시뮬레이터: `mobile/.env` → `EXPO_PUBLIC_API_URL=http://localhost:8080`
-- 실기기: Mac Wi-Fi IP + `OAUTH_ALLOWED_EXP_HOSTS` (`.env.example` 참고)
+| 환경 | `mobile/.env` |
+|------|----------------|
+| iOS 시뮬레이터 | `EXPO_PUBLIC_API_URL=http://localhost:8080` |
+| 실기기 (Expo Go) | `EXPO_PUBLIC_API_URL=http://{Mac_WiFi_IP}:8080` |
 
-## docs 목록
+- 백엔드: http://localhost:8080/api/v1/health
+- Flyway V7 적용 필요 시 `./gradlew bootRun` 한 번 (중복 일정 정리 포함)
+- 8080 점유 시: `lsof -i :8080` → `kill <PID>`
 
-| 파일 | 용도 |
+---
+
+## 자주 건드리는 파일
+
+| 영역 | 경로 |
 |------|------|
-| [project-context.md](project-context.md) | 이 파일 — 요약 & 진입점 |
-| [schedule-academy-plan.md](schedule-academy-plan.md) | 일정/학원/귀가 설계 & 구현 계획 |
-| [decisions.md](decisions.md) | 결정 로그 |
-| [sso-setup-guide.md](sso-setup-guide.md) | Kakao/Naver/Google 콘솔 설정 |
-| [database-erd.md](database-erd.md) | 현재 DB ERD (V5 기준, V6 전) |
+| 일정 API | `backend/.../schedule/ScheduleService.java`, `ScheduleSeriesMaterializer.java` |
+| 일정 UI | `mobile/src/screens/ScheduleScreen.js`, `ScheduleEditScreen.js` |
+| OAuth | `backend/.../auth/`, `mobile/src/services/auth.js` |
+| 가족 초대 | `backend/.../family/FamilyInviteService.java`, `FamilyJoinService.java` |
+| 마이 | `mobile/src/screens/MyScreen.js`, `FamilySetupScreen.js` |
+| 마이그레이션 | `backend/src/main/resources/db/migration/` |
 
-## Cursor / 모바일 웹 팁
+---
 
-1. **같은 Git repo·branch** (`main`) clone 후 `git pull`
-2. 새 채팅: *「docs/project-context.md 와 schedule-academy-plan.md 읽고 V6부터 구현해줘」*
-3. `.env`는 Git 제외 — `.env.example` 복사
-4. 채팅 기록은 기기 간 **동기화 안 됨** → 결정은 `docs/` + commit
+## Git / Secret
 
-## 커밋 이력 (참고)
+- **커밋 금지:** `.env`, `mobile/.env` (키·JWT secret)
+- **참고:** `.env.example`, `mobile/.env.example` (있을 경우)
 
-- `ac9c42c` — Initial MVP
-- `7447536` — Naver/Google SSO
-- `101aa7d` — LoginScreen / OAuth bridge fix
-- `910e88a` — SSO security hardening
+---
+
+## 다음 작업
+
+상세 TODO·미테스트 항목 → **[status-and-todo.md](status-and-todo.md)**

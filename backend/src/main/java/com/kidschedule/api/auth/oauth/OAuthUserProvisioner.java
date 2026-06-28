@@ -10,6 +10,7 @@ import com.kidschedule.api.domain.repository.UserOauthLinkRepository;
 import com.kidschedule.api.domain.repository.UserRepository;
 import com.kidschedule.api.web.dto.AuthResponse;
 import com.kidschedule.api.web.dto.AuthUserResponse;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -40,6 +41,7 @@ public class OAuthUserProvisioner {
 		User user = userOauthLinkRepository
 				.findByOauthProviderAndOauthSubject(provider, oauthSubject)
 				.map(UserOauthLink::getUser)
+				.map(existing -> syncNickname(existing, resolvedNickname, provider))
 				.orElseGet(() -> createUserWithLink(provider, oauthSubject, resolvedNickname));
 
 		AuthenticatedUser authenticatedUser =
@@ -57,6 +59,56 @@ public class OAuthUserProvisioner {
 		User user = userRepository.save(new User(nickname, AccountType.ADULT));
 		userOauthLinkRepository.save(new UserOauthLink(user, provider, oauthSubject));
 		return user;
+	}
+
+	@Transactional
+	public void linkOAuthToUser(UUID userId, OAuthProvider provider, String oauthSubject) {
+		if (!StringUtils.hasText(oauthSubject)) {
+			throw new IllegalArgumentException("OAuth subject is required");
+		}
+
+		User user = userRepository
+				.findById(userId)
+				.orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+		userOauthLinkRepository
+				.findByOauthProviderAndOauthSubject(provider, oauthSubject)
+				.ifPresent(existing -> {
+					if (!existing.getUser().getId().equals(userId)) {
+						throw new IllegalArgumentException(providerLabel(provider) + " 계정이 이미 다른 사용자에 연결되어 있습니다.");
+					}
+				});
+
+		if (userOauthLinkRepository.findByUserIdAndOauthProvider(userId, provider).isPresent()) {
+			throw new IllegalArgumentException(providerLabel(provider) + " 계정이 이미 연결되어 있습니다.");
+		}
+
+		userOauthLinkRepository.save(new UserOauthLink(user, provider, oauthSubject));
+	}
+
+	private String providerLabel(OAuthProvider provider) {
+		return switch (provider) {
+			case KAKAO -> "카카오";
+			case NAVER -> "네이버";
+			case GOOGLE -> "Google";
+		};
+	}
+
+	private User syncNickname(User user, String resolvedNickname, OAuthProvider provider) {
+		if (isPlaceholderNickname(user.getNickname()) && StringUtils.hasText(resolvedNickname)) {
+			String providerDefault = defaultNickname(provider);
+			if (!providerDefault.equals(resolvedNickname)) {
+				user.setNickname(resolvedNickname);
+				return userRepository.save(user);
+			}
+		}
+		return user;
+	}
+
+	private boolean isPlaceholderNickname(String nickname) {
+		return defaultNickname(OAuthProvider.KAKAO).equals(nickname)
+				|| defaultNickname(OAuthProvider.NAVER).equals(nickname)
+				|| defaultNickname(OAuthProvider.GOOGLE).equals(nickname);
 	}
 
 	private String defaultNickname(OAuthProvider provider) {

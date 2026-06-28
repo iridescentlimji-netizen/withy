@@ -1,18 +1,25 @@
 package com.kidschedule.api.web;
 
 import com.kidschedule.api.auth.AuthenticatedUser;
+import com.kidschedule.api.auth.UserProfileService;
+import com.kidschedule.api.auth.oauth.OAuthAccountLinkService;
 import com.kidschedule.api.auth.oauth.google.GoogleOAuthService;
 import com.kidschedule.api.auth.oauth.kakao.KakaoOAuthService;
 import com.kidschedule.api.auth.oauth.naver.NaverOAuthService;
 import com.kidschedule.api.web.dto.AuthResponse;
 import com.kidschedule.api.web.dto.AuthUrlResponse;
 import com.kidschedule.api.web.dto.AuthUserResponse;
+import com.kidschedule.api.domain.enums.OAuthProvider;
 import com.kidschedule.api.web.dto.OAuthCallbackRequest;
+import com.kidschedule.api.web.dto.OAuthLinksResponse;
+import com.kidschedule.api.web.dto.UpdateNicknameRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,14 +33,20 @@ public class AuthController {
 	private final KakaoOAuthService kakaoOAuthService;
 	private final NaverOAuthService naverOAuthService;
 	private final GoogleOAuthService googleOAuthService;
+	private final UserProfileService userProfileService;
+	private final OAuthAccountLinkService oAuthAccountLinkService;
 
 	public AuthController(
 			KakaoOAuthService kakaoOAuthService,
 			NaverOAuthService naverOAuthService,
-			GoogleOAuthService googleOAuthService) {
+			GoogleOAuthService googleOAuthService,
+			UserProfileService userProfileService,
+			OAuthAccountLinkService oAuthAccountLinkService) {
 		this.kakaoOAuthService = kakaoOAuthService;
 		this.naverOAuthService = naverOAuthService;
 		this.googleOAuthService = googleOAuthService;
+		this.userProfileService = userProfileService;
+		this.oAuthAccountLinkService = oAuthAccountLinkService;
 	}
 
 	@GetMapping("/kakao/url")
@@ -86,6 +99,32 @@ public class AuthController {
 
 	@GetMapping("/me")
 	public AuthUserResponse me(@AuthenticationPrincipal AuthenticatedUser user) {
-		return new AuthUserResponse(user.userId(), user.nickname(), user.accountType());
+		return userProfileService.getProfile(user.userId());
+	}
+
+	@PatchMapping("/me")
+	public AuthUserResponse updateMe(
+			@AuthenticationPrincipal AuthenticatedUser user, @Valid @RequestBody UpdateNicknameRequest request) {
+		return userProfileService.updateNickname(user.userId(), request);
+	}
+
+	@GetMapping("/me/oauth-links")
+	public OAuthLinksResponse listOAuthLinks(@AuthenticationPrincipal AuthenticatedUser user) {
+		return oAuthAccountLinkService.listLinks(user.userId());
+	}
+
+	@GetMapping("/{provider}/link/url")
+	public AuthUrlResponse getOAuthLinkUrl(
+			@AuthenticationPrincipal AuthenticatedUser user,
+			@PathVariable OAuthProvider provider,
+			@RequestParam(required = false) String redirectUri,
+			@RequestParam(required = false) String returnUri) {
+		return oAuthAccountLinkService.createLinkUrl(user.userId(), provider, redirectUri, returnUri);
+	}
+
+	@PostMapping("/{provider}/link/callback")
+	public OAuthLinksResponse oauthLinkCallback(
+			@PathVariable OAuthProvider provider, @Valid @RequestBody OAuthCallbackRequest request) {
+		return oAuthAccountLinkService.completeLink(provider, request);
 	}
 }

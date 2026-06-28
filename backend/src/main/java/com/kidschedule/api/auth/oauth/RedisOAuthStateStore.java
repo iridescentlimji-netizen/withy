@@ -2,6 +2,7 @@ package com.kidschedule.api.auth.oauth;
 
 import com.kidschedule.api.domain.enums.OAuthProvider;
 import java.time.Duration;
+import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -22,8 +23,14 @@ public class RedisOAuthStateStore implements OAuthStateStore {
 	}
 
 	@Override
-	public void saveState(String state, OAuthProvider provider, String redirectUri, String returnUri) {
-		String value = provider.name() + VALUE_SEPARATOR + redirectUri + VALUE_SEPARATOR + nullToEmpty(returnUri);
+	public void saveState(String state, OAuthProvider provider, String redirectUri, String returnUri, UUID linkUserId) {
+		String value = provider.name()
+				+ VALUE_SEPARATOR
+				+ redirectUri
+				+ VALUE_SEPARATOR
+				+ nullToEmpty(returnUri)
+				+ VALUE_SEPARATOR
+				+ nullToEmpty(linkUserId);
 		redisTemplate.opsForValue().set(KEY_PREFIX + state, value, TTL);
 	}
 
@@ -45,7 +52,7 @@ public class RedisOAuthStateStore implements OAuthStateStore {
 			throw new IllegalArgumentException("Invalid or expired OAuth state");
 		}
 
-		String[] parts = stored.split(VALUE_SEPARATOR, 3);
+		String[] parts = stored.split(VALUE_SEPARATOR, 4);
 		if (parts.length < 2) {
 			throw new IllegalArgumentException("Invalid OAuth state payload");
 		}
@@ -53,11 +60,23 @@ public class RedisOAuthStateStore implements OAuthStateStore {
 		OAuthProvider provider = OAuthProvider.valueOf(parts[0]);
 		String redirectUri = parts[1];
 		String returnUri = parts.length > 2 ? emptyToNull(parts[2]) : null;
-		return new OAuthState(provider, redirectUri, returnUri);
+		UUID linkUserId = parts.length > 3 ? parseUuid(parts[3]) : null;
+		return new OAuthState(provider, redirectUri, returnUri, linkUserId);
+	}
+
+	private UUID parseUuid(String value) {
+		if (!StringUtils.hasText(value)) {
+			return null;
+		}
+		return UUID.fromString(value);
 	}
 
 	private String nullToEmpty(String value) {
 		return value == null ? "" : value;
+	}
+
+	private String nullToEmpty(UUID value) {
+		return value == null ? "" : value.toString();
 	}
 
 	private String emptyToNull(String value) {

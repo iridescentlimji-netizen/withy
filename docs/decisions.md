@@ -14,9 +14,15 @@
 | 2026-06 | 반복 패턴: WEEKLY, BIWEEKLY, MONTHLY(day-of-month) | 학원 수업 패턴 반영 |
 | 2026-06 | 이전 일정 UI = **하이브리드** | 예정 집중 + 최근 완료 1건 peek + 펼치기 |
 | 2026-06 | 학원 찾기 = 선택 pre-fill + 신규 등록 | 중복 입력 방지, schedule에 category 스냅샷 |
+| 2026-06 | 하단 탭 4개: **홈 / 일정 / 학원관리 / 마이** | Figma MVP 목업과 일치; 기존 「관리」 탭 분리 |
+| 2026-06 | `schedules.cancelled` = UI 「삭제」(soft delete) | 반복 예외·FUTURE 취소; hard DELETE 없음 |
+| 2026-06 | 반복 materialize rolling + V7 dedupe | 12주 horizon 이후 스크롤 생성; `(series_id,start_at)` 유니크 |
+| 2026-06 | FUTURE cancel → `effectiveUntil` 갱신 | materializer가 취소 후 미래 일정 재생성하지 않도록 |
+| 2026-06 | OAuth 계정 연결 (multi-provider → 1 user) | 카카오/네이버/구글 동일 가족 데이터 |
+| 2026-06 | 가족 초대 Redis 8자 코드 24h | join_requests 승인 후 guardian 추가 |
 
 ## 미결정 / 구현 시 확정
 
 - 매월 31일 → 2월 **말일 보정** vs skip
-- `schedules.cancelled` 컬럼 vs DELETE (반복 예외)
 - 알림, 날씨 위젯, DROPOFF 일정 타입
+- JWT refresh

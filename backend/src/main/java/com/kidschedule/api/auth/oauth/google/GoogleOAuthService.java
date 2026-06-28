@@ -35,11 +35,21 @@ public class GoogleOAuthService {
 	}
 
 	public AuthUrlResponse createAuthorizeUrl(String requestedRedirectUri, String requestedReturnUri) {
+		return createAuthorizeUrl(null, requestedRedirectUri, requestedReturnUri);
+	}
+
+	public AuthUrlResponse createLinkAuthorizeUrl(
+			java.util.UUID userId, String requestedRedirectUri, String requestedReturnUri) {
+		return createAuthorizeUrl(userId, requestedRedirectUri, requestedReturnUri);
+	}
+
+	private AuthUrlResponse createAuthorizeUrl(
+			java.util.UUID linkUserId, String requestedRedirectUri, String requestedReturnUri) {
 		ensureConfigured();
 		String redirectUri = properties.resolveRedirectUri(requestedRedirectUri);
 		String returnUri = oAuthReturnUriValidator.resolveReturnUri(requestedReturnUri, OAuthProvider.GOOGLE);
 		String state = UUID.randomUUID().toString();
-		oAuthStateStore.saveState(state, OAuthProvider.GOOGLE, redirectUri, returnUri);
+		oAuthStateStore.saveState(state, OAuthProvider.GOOGLE, redirectUri, returnUri, linkUserId);
 		return new AuthUrlResponse(googleOAuthClient.buildAuthorizeUrl(state, redirectUri), state);
 	}
 
@@ -51,7 +61,21 @@ public class GoogleOAuthService {
 		ensureConfigured();
 		var oauthState = oAuthStateStore.consumeState(request.state());
 		OAuthRedirectSupport.assertProvider(oauthState, OAuthProvider.GOOGLE);
+		if (oauthState.isLinkFlow()) {
+			throw new IllegalArgumentException("Invalid login state");
+		}
 
+		GoogleUserResponse googleUser = fetchGoogleUser(request, oauthState);
+		return oAuthUserProvisioner.issueAuthResponse(
+				OAuthProvider.GOOGLE, googleUser.sub(), googleUser.name());
+	}
+
+	public String resolveOAuthSubject(OAuthCallbackRequest request, com.kidschedule.api.auth.oauth.OAuthState oauthState) {
+		return fetchGoogleUser(request, oauthState).sub();
+	}
+
+	private GoogleUserResponse fetchGoogleUser(OAuthCallbackRequest request, com.kidschedule.api.auth.oauth.OAuthState oauthState) {
+		ensureConfigured();
 		var tokenResponse = googleOAuthClient.exchangeCodeForToken(request.code(), oauthState.redirectUri());
 		if (tokenResponse == null || !StringUtils.hasText(tokenResponse.accessToken())) {
 			throw new IllegalStateException("Failed to exchange Google authorization code");
@@ -61,9 +85,7 @@ public class GoogleOAuthService {
 		if (googleUser == null || !StringUtils.hasText(googleUser.sub())) {
 			throw new IllegalStateException("Failed to fetch Google user profile");
 		}
-
-		return oAuthUserProvisioner.issueAuthResponse(
-				OAuthProvider.GOOGLE, googleUser.sub(), googleUser.name());
+		return googleUser;
 	}
 
 	private void ensureConfigured() {

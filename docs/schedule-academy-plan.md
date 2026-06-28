@@ -2,7 +2,8 @@
 
 > **모바일/PC Cursor 공용 문서.** 새 Agent 채팅 시작 시 `docs/project-context.md`와 함께 읽기.
 >
-> 상태: **설계 확정, 구현 전** (V6 마이그레이션부터 착수)
+> 상태: **MVP 코어 구현 완료** (V7, 롤링 materialize, 일정 수정/삭제, 가족 초대)  
+> TODO·미테스트: [`status-and-todo.md`](status-and-todo.md)
 
 ## 합의된 방향
 
@@ -157,9 +158,17 @@ flowchart TD
 
 ## 구현 TODO
 
-- [ ] V6 Flyway: academies, schedule_series, schedules 확장
-- [ ] Academy CRUD + Family bootstrap
-- [ ] ScheduleSeriesService (WEEKLY → BIWEEKLY → MONTHLY)
-- [ ] Schedule API + calendar + grouped list
-- [ ] Home dashboard API
-- [ ] Mobile 일정/홈 UI
+- [x] V6 Flyway: academies, schedule_series, schedules 확장
+- [x] V7 Flyway: 중복 series occurrence 정리 + 유니크 인덱스
+- [x] Academy CRUD + Family bootstrap
+- [x] ScheduleSeriesService + **ScheduleSeriesMaterializer** (rolling)
+- [x] Schedule API + calendar + grouped list + cancel scope + series update API
+- [x] Home dashboard API
+- [x] Mobile 일정/홈 UI (홈·일정 목록·등록·수정·삭제·학원·아이·마이)
+- [x] 가족 초대/참여/승인 (backend + mobile)
+- [x] OAuth 계정 연결
+- [ ] 반복 **series 수정 UI** (mobile)
+- [ ] 완료 일정 peek UI (Figma 하이브리드)
+- [ ] 일정 검색, 월 picker, DROPOFF, 픽업 보호자 선택
+
+→ 전체 목록: [`status-and-todo.md`](status-and-todo.md)

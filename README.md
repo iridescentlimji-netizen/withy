@@ -94,16 +94,19 @@ Expo Go 앱(App Store, SDK 54)으로 QR 코드를 스캔하거나 `i` / `a` 로 
 
 | Doc | Purpose |
 |-----|---------|
-| [`docs/project-context.md`](docs/project-context.md) | **Cursor 진입점** — 상태 요약, 실행 방법 |
-| [`docs/schedule-academy-plan.md`](docs/schedule-academy-plan.md) | 일정/학원/귀가 설계 & 구현 계획 |
+| [`docs/project-context.md`](docs/project-context.md) | **Cursor 진입점** — 상태 요약, API, 실행 |
+| [`docs/status-and-todo.md`](docs/status-and-todo.md) | **TODO·미테스트·QA 체크리스트** |
+| [`docs/cursor-workflow.md`](docs/cursor-workflow.md) | PC/모바일 Cursor 워크플로 |
+| [`docs/schedule-academy-plan.md`](docs/schedule-academy-plan.md) | 일정/학원/귀가 설계 |
+| [`docs/mobile-screens.md`](docs/mobile-screens.md) | Figma ↔ 화면 ↔ API |
 | [`docs/decisions.md`](docs/decisions.md) | 제품·아키텍처 결정 로그 |
 | [`docs/sso-setup-guide.md`](docs/sso-setup-guide.md) | SSO 콘솔 설정 |
-| [`AGENTS.md`](AGENTS.md) | AI Agent용 요약 |
+| [`docs/database-erd.md`](docs/database-erd.md) | ERD |
+| [`AGENTS.md`](AGENTS.md) | AI Agent 1페이지 요약 |
 
-모바일 Cursor 새 채팅: *「docs/project-context.md 읽고 schedule-academy-plan Phase 1 구현해줘」*
+**Cursor 새 채팅:** *「docs/project-context.md 와 docs/status-and-todo.md 를 읽고 [작업] 해줘」*
 
-## Next Steps
+## Current status (2026-06-28)
 
-1. V6 migration — academies, schedule_series (see `docs/schedule-academy-plan.md`)
-2. Academy / Schedule / Home API
-3. Mobile: 홈·일정·학원관리 UI (Figma draft)
+MVP 코어 + P0/P1 (롤링 반복, 일정 수정/삭제, 가족 초대, OAuth 연결) 구현 완료.  
+다음 작업 → [`docs/status-and-todo.md`](docs/status-and-todo.md)

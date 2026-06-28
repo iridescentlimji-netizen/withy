@@ -10,7 +10,7 @@ import org.springframework.util.StringUtils;
 public class OAuthReturnUriValidator {
 
 	private static final Pattern EXP_RETURN_URI_PATTERN =
-			Pattern.compile("^exp://([^/?#]+)/--/oauth/(kakao|naver|google)$");
+			Pattern.compile("^exp://([^/?#]+)/--/oauth/(kakao|naver|google)(?:/link)?$");
 
 	private final OAuthSecurityProperties securityProperties;
 
@@ -38,7 +38,8 @@ public class OAuthReturnUriValidator {
 	}
 
 	private boolean matchesKidScheduleReturnUri(String returnUri, OAuthProvider provider) {
-		return returnUri.equals(buildKidScheduleReturnUri(provider));
+		return returnUri.equals(buildKidScheduleReturnUri(provider))
+				|| returnUri.equals(buildKidScheduleLinkReturnUri(provider));
 	}
 
 	private boolean matchesAllowedExpReturnUri(String returnUri, OAuthProvider provider) {
@@ -66,5 +67,9 @@ public class OAuthReturnUriValidator {
 
 	public static String buildKidScheduleReturnUri(OAuthProvider provider) {
 		return "kid-schedule://oauth/" + provider.name().toLowerCase();
+	}
+
+	public static String buildKidScheduleLinkReturnUri(OAuthProvider provider) {
+		return buildKidScheduleReturnUri(provider) + "/link";
 	}
 }

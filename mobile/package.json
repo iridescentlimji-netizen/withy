@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
+    "@react-native-community/datetimepicker": "8.4.4",
+    "@react-navigation/bottom-tabs": "^7.18.3",
+    "@react-navigation/native": "^7.3.4",
+    "@react-navigation/native-stack": "^7.17.6",
     "expo": "~54.0.0",
     "expo-asset": "~12.0.13",
     "expo-auth-session": "~7.0.11",
@@ -14,14 +18,20 @@
     "expo-status-bar": "~3.0.9",
     "expo-web-browser": "~15.0.11",
     "react": "19.1.0",
-    "react-native": "0.81.5"
+    "react-native": "0.81.5",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0"
   },
   "scripts": {
-    "start": "expo start",
-    "start:simulator": "expo start --localhost",
+    "start": "REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 expo start --localhost",
+    "start:simulator": "REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 expo start --localhost --clear",
+    "dev:ios": "bash scripts/dev-ios.sh",
+    "ios:simulator": "REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo run:ios --port 8081",
+    "ios:open": "bash scripts/ios-open.sh",
     "android": "expo run:android",
-    "ios": "expo start --ios --localhost",
-    "ios:dev": "expo run:ios",
+    "ios": "REACT_NATIVE_PACKAGER_HOSTNAME=localhost expo start --ios --localhost",
+    "ios:dev": "REACT_NATIVE_PACKAGER_HOSTNAME=localhost expo run:ios",
+    "ios:rebuild": "REACT_NATIVE_PACKAGER_HOSTNAME=localhost npx expo prebuild --platform ios --clean && REACT_NATIVE_PACKAGER_HOSTNAME=localhost expo run:ios",
     "web": "expo start --web"
   },
   "private": true

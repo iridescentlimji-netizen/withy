@@ -2,6 +2,7 @@ package com.kidschedule.api.domain.entity;
 
 import com.kidschedule.api.common.BaseUuidEntity;
 import com.kidschedule.api.domain.enums.ScheduleType;
+import com.kidschedule.api.domain.enums.SubjectCategory;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -16,9 +17,17 @@ import java.time.Instant;
 @Table(name = "schedules")
 public class Schedule extends BaseUuidEntity {
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "series_id")
+	private ScheduleSeries series;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "child_id", nullable = false)
 	private Child child;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "academy_id")
+	private Academy academy;
 
 	@Column(nullable = false, length = 100)
 	private String title;
@@ -30,11 +39,22 @@ public class Schedule extends BaseUuidEntity {
 	@Column(name = "schedule_type", nullable = false, length = 30)
 	private ScheduleType scheduleType = ScheduleType.OTHER;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "subject_category", length = 30)
+	private SubjectCategory subjectCategory;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "pickup_guardian_id")
+	private User pickupGuardian;
+
 	@Column(name = "start_at", nullable = false)
 	private Instant startAt;
 
 	@Column(name = "end_at", nullable = false)
 	private Instant endAt;
+
+	@Column(nullable = false)
+	private boolean cancelled = false;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "created_by", nullable = false)
@@ -60,8 +80,24 @@ public class Schedule extends BaseUuidEntity {
 		this.createdBy = createdBy;
 	}
 
+	public ScheduleSeries getSeries() {
+		return series;
+	}
+
+	public void setSeries(ScheduleSeries series) {
+		this.series = series;
+	}
+
 	public Child getChild() {
 		return child;
+	}
+
+	public Academy getAcademy() {
+		return academy;
+	}
+
+	public void setAcademy(Academy academy) {
+		this.academy = academy;
 	}
 
 	public String getTitle() {
@@ -88,6 +124,22 @@ public class Schedule extends BaseUuidEntity {
 		this.scheduleType = scheduleType;
 	}
 
+	public SubjectCategory getSubjectCategory() {
+		return subjectCategory;
+	}
+
+	public void setSubjectCategory(SubjectCategory subjectCategory) {
+		this.subjectCategory = subjectCategory;
+	}
+
+	public User getPickupGuardian() {
+		return pickupGuardian;
+	}
+
+	public void setPickupGuardian(User pickupGuardian) {
+		this.pickupGuardian = pickupGuardian;
+	}
+
 	public Instant getStartAt() {
 		return startAt;
 	}
@@ -102,6 +154,14 @@ public class Schedule extends BaseUuidEntity {
 
 	public void setEndAt(Instant endAt) {
 		this.endAt = endAt;
+	}
+
+	public boolean isCancelled() {
+		return cancelled;
+	}
+
+	public void setCancelled(boolean cancelled) {
+		this.cancelled = cancelled;
 	}
 
 	public User getCreatedBy() {

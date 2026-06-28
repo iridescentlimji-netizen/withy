@@ -1,59 +1,130 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { AppHeader } from '../components/AppHeader';
-import { API_BASE_URL } from '../config/env';
-import { useAuth } from '../context/AuthContext';
-import { checkApiHealth } from '../services/api';
+import { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChildStatusCard } from '../components/home/ChildStatusCard';
+import { HomeDateTimeBar } from '../components/home/HomeDateTimeBar';
+import { HomeHeader } from '../components/home/HomeHeader';
+import { ReturnPlanSection } from '../components/home/ReturnPlanSection';
+import { formatMemberRole } from '../constants/profile';
+import { useFamily } from '../context/FamilyContext';
+import { getHome } from '../services/api';
 import { colors, spacing, typography } from '../theme';
 
 export function HomeScreen() {
-  const { user, logout } = useAuth();
-  const [apiStatus, setApiStatus] = useState('checking');
-  const [apiMessage, setApiMessage] = useState('');
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const { activeFamily } = useFamily();
+  const [home, setHome] = useState(null);
+  const [status, setStatus] = useState('loading');
+  const [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    checkApiHealth()
-      .then((data) => {
-        setApiStatus('connected');
-        setApiMessage(data.status ?? 'UP');
-      })
-      .catch((error) => {
-        setApiStatus('offline');
-        setApiMessage(
-          `백엔드 서버에 연결할 수 없습니다.\n(${API_BASE_URL})\n${error.message ?? ''}`.trim(),
-        );
-      });
-  }, []);
+  const loadHome = useCallback(async () => {
+    if (!activeFamily?.id) {
+      return;
+    }
+
+    setError('');
+    setStatus('loading');
+
+    try {
+      const data = await getHome(activeFamily.id);
+      setHome(data);
+      setStatus('ready');
+    } catch (loadError) {
+      setHome(null);
+      setStatus('error');
+      setError(loadError.message ?? '홈 정보를 불러오지 못했습니다.');
+    }
+  }, [activeFamily?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHome();
+    }, [loadHome]),
+  );
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadHome();
+    setRefreshing(false);
+  }, [loadHome]);
 
   return (
-    <View style={styles.container}>
-      <AppHeader subtitle="맞벌이 부부를 위한 아이 스케줄 관리" />
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.xl },
+      ]}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+    >
+      {status === 'ready' && home ? (
+        <View style={styles.topGroup}>
+          <HomeHeader
+            nickname={home.nickname}
+            roleLabel={formatMemberRole(home.role)}
+            onPressNotifications={() => {}}
+          />
+          <HomeDateTimeBar />
+        </View>
+      ) : (
+        <HomeDateTimeBar />
+      )}
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>로그인 사용자</Text>
-        <Text style={styles.userName}>{user?.nickname ?? '사용자'}</Text>
-        <Text style={styles.userMeta}>{user?.accountType ?? 'ADULT'}</Text>
-        <Pressable style={styles.logoutButton} onPress={logout}>
-          <Text style={styles.logoutButtonText}>로그아웃</Text>
-        </Pressable>
-      </View>
+      {status === 'loading' ? (
+        <ActivityIndicator color={colors.primary} style={styles.loader} />
+      ) : null}
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>서버 연결 상태</Text>
-        {apiStatus === 'checking' ? (
-          <ActivityIndicator color={colors.primary} />
-        ) : (
-          <Text
-            style={[
-              styles.status,
-              apiStatus === 'connected' ? styles.statusOk : styles.statusError,
-            ]}
-          >
-            {apiStatus === 'connected' ? `API ${apiMessage}` : apiMessage}
-          </Text>
-        )}
-      </View>
-    </View>
+      {status === 'error' ? (
+        <View style={styles.errorCard}>
+          <Text style={styles.error}>{error}</Text>
+          <Pressable style={styles.retryButton} onPress={loadHome}>
+            <Text style={styles.retryButtonText}>다시 시도</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {status === 'ready' && home ? (
+        <>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>아이는 지금</Text>
+            {home.children?.length ? (
+              <View style={styles.cardList}>
+                {home.children.map((child) => (
+                  <ChildStatusCard key={child.childId} child={child} familyId={activeFamily?.id} />
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyText}>등록된 아이가 없습니다.</Text>
+                <Pressable
+                  style={styles.setupButton}
+                  onPress={() => navigation.navigate('ChildSetup')}
+                >
+                  <Text style={styles.setupButtonText}>아이 등록하기</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+
+          <ReturnPlanSection
+            familyChildren={home.children}
+            returnPlans={home.returnPlans}
+            onPressEdit={() => navigation.navigate('Schedule')}
+          />
+        </>
+      ) : null}
+    </ScrollView>
   );
 }
 
@@ -61,50 +132,68 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
+  },
+  content: {
+    paddingHorizontal: spacing.md,
+    gap: spacing.lg,
+  },
+  topGroup: {
     gap: spacing.md,
   },
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
+  loader: {
+    marginTop: spacing.md,
+  },
+  section: {
+    gap: spacing.md,
+  },
+  sectionTitle: {
+    ...typography.sectionTitle,
+    color: colors.text,
+  },
+  cardList: {
+    gap: spacing.sm + spacing.xs,
+  },
+  emptyCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 32,
     padding: spacing.md,
     gap: spacing.sm,
   },
-  cardTitle: {
+  emptyText: {
+    ...typography.bodySmall,
+    color: colors.textTertiary,
+  },
+  setupButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  setupButtonText: {
     ...typography.body,
     fontWeight: '600',
-    color: colors.text,
+    color: '#FFFFFF',
   },
-  userName: {
-    ...typography.title,
-    color: colors.text,
+  errorCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 32,
+    padding: spacing.md,
+    gap: spacing.sm,
   },
-  userMeta: {
-    ...typography.caption,
-    color: colors.textSecondary,
+  error: {
+    ...typography.body,
+    color: '#DC2626',
   },
-  logoutButton: {
+  retryButton: {
     alignSelf: 'flex-start',
-    marginTop: spacing.sm,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceSubtle,
   },
-  logoutButtonText: {
+  retryButtonText: {
     ...typography.body,
     color: colors.textSecondary,
-  },
-  status: {
-    ...typography.body,
-  },
-  statusOk: {
-    color: '#059669',
-  },
-  statusError: {
-    color: '#DC2626',
   },
 });

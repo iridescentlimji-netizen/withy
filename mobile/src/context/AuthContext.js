@@ -1,16 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { loginWithOAuthProvider, logout as logoutRequest, fetchCurrentUser } from '../services/auth';
+import { loginWithOAuthProvider, logout as logoutRequest, fetchCurrentUser, updateMyNickname } from '../services/auth';
 import { getAccessToken } from '../services/tokenStorage';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isRestoring, setIsRestoring] = useState(true);
   const [error, setError] = useState('');
 
   const restoreSession = useCallback(async () => {
-    setIsLoading(true);
+    setIsRestoring(true);
     setError('');
 
     try {
@@ -26,7 +26,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       setError(sessionError.message ?? '세션 복원에 실패했습니다.');
     } finally {
-      setIsLoading(false);
+      setIsRestoring(false);
     }
   }, []);
 
@@ -47,18 +47,26 @@ export function AuthProvider({ children }) {
     setError('');
   }, []);
 
+  const updateNickname = useCallback(async (nickname) => {
+    setError('');
+    const updated = await updateMyNickname(nickname);
+    setUser(updated);
+    return updated;
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
-      isLoading,
+      isRestoring,
       error,
       isAuthenticated: Boolean(user),
       login,
       logout,
+      updateNickname,
       restoreSession,
       setError,
     }),
-    [user, isLoading, error, login, logout, restoreSession],
+    [user, isRestoring, error, login, logout, updateNickname, restoreSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

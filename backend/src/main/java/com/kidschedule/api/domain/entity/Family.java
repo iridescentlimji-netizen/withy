@@ -31,6 +31,9 @@ public class Family extends BaseUuidEntity {
 	@OneToMany(mappedBy = "family")
 	private List<FamilyJoinRequest> joinRequests = new ArrayList<>();
 
+	@OneToMany(mappedBy = "family")
+	private List<Academy> academies = new ArrayList<>();
+
 	protected Family() {
 	}
 
@@ -61,5 +64,9 @@ public class Family extends BaseUuidEntity {
 
 	public List<FamilyJoinRequest> getJoinRequests() {
 		return joinRequests;
+	}
+
+	public List<Academy> getAcademies() {
+		return academies;
 	}
 }

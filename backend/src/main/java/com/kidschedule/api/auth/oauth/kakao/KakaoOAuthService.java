@@ -36,11 +36,21 @@ public class KakaoOAuthService {
 	}
 
 	public AuthUrlResponse createAuthorizeUrl(String requestedRedirectUri, String requestedReturnUri) {
+		return createAuthorizeUrl(null, requestedRedirectUri, requestedReturnUri);
+	}
+
+	public AuthUrlResponse createLinkAuthorizeUrl(
+			java.util.UUID userId, String requestedRedirectUri, String requestedReturnUri) {
+		return createAuthorizeUrl(userId, requestedRedirectUri, requestedReturnUri);
+	}
+
+	private AuthUrlResponse createAuthorizeUrl(
+			java.util.UUID linkUserId, String requestedRedirectUri, String requestedReturnUri) {
 		ensureConfigured();
 		String redirectUri = properties.resolveRedirectUri(requestedRedirectUri);
 		String returnUri = oAuthReturnUriValidator.resolveReturnUri(requestedReturnUri, OAuthProvider.KAKAO);
 		String state = UUID.randomUUID().toString();
-		oAuthStateStore.saveState(state, OAuthProvider.KAKAO, redirectUri, returnUri);
+		oAuthStateStore.saveState(state, OAuthProvider.KAKAO, redirectUri, returnUri, linkUserId);
 		return new AuthUrlResponse(kakaoOAuthClient.buildAuthorizeUrl(state, redirectUri), state);
 	}
 
@@ -52,19 +62,30 @@ public class KakaoOAuthService {
 		ensureConfigured();
 		var oauthState = oAuthStateStore.consumeState(request.state());
 		OAuthRedirectSupport.assertProvider(oauthState, OAuthProvider.KAKAO);
+		if (oauthState.isLinkFlow()) {
+			throw new IllegalArgumentException("Invalid login state");
+		}
 
+		KakaoUserResponse kakaoUser = fetchKakaoUser(request, oauthState);
+		return oAuthUserProvisioner.issueAuthResponse(
+				OAuthProvider.KAKAO, String.valueOf(kakaoUser.id()), resolveNickname(kakaoUser));
+	}
+
+	public String resolveOAuthSubject(OAuthCallbackRequest request, com.kidschedule.api.auth.oauth.OAuthState oauthState) {
+		KakaoUserResponse kakaoUser = fetchKakaoUser(request, oauthState);
+		if (kakaoUser == null || kakaoUser.id() == null) {
+			throw new IllegalStateException("Failed to fetch Kakao user profile");
+		}
+		return String.valueOf(kakaoUser.id());
+	}
+
+	private KakaoUserResponse fetchKakaoUser(OAuthCallbackRequest request, com.kidschedule.api.auth.oauth.OAuthState oauthState) {
+		ensureConfigured();
 		var tokenResponse = kakaoOAuthClient.exchangeCodeForToken(request.code(), oauthState.redirectUri());
 		if (tokenResponse == null || !StringUtils.hasText(tokenResponse.accessToken())) {
 			throw new IllegalStateException("Failed to exchange Kakao authorization code");
 		}
-
-		KakaoUserResponse kakaoUser = kakaoOAuthClient.fetchUser(tokenResponse.accessToken());
-		if (kakaoUser == null || kakaoUser.id() == null) {
-			throw new IllegalStateException("Failed to fetch Kakao user profile");
-		}
-
-		return oAuthUserProvisioner.issueAuthResponse(
-				OAuthProvider.KAKAO, String.valueOf(kakaoUser.id()), resolveNickname(kakaoUser));
+		return kakaoOAuthClient.fetchUser(tokenResponse.accessToken());
 	}
 
 	private String resolveNickname(KakaoUserResponse kakaoUser) {

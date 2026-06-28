@@ -2,6 +2,7 @@ package com.kidschedule.api.config;
 
 import com.kidschedule.api.auth.jwt.JwtAuthenticationFilter;
 import com.kidschedule.api.auth.jwt.JwtProperties;
+import com.kidschedule.api.config.ScheduleProperties;
 import com.kidschedule.api.auth.oauth.google.GoogleOAuthProperties;
 import com.kidschedule.api.auth.oauth.kakao.KakaoOAuthProperties;
 import com.kidschedule.api.auth.oauth.naver.NaverOAuthProperties;
@@ -20,6 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableConfigurationProperties({
 	JwtProperties.class,
+	ScheduleProperties.class,
 	OAuthSecurityProperties.class,
 	KakaoOAuthProperties.class,
 	NaverOAuthProperties.class,
@@ -48,6 +50,9 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.GET, "/api/v1/auth/google/url").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/auth/google/redirect").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/auth/google/callback").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/auth/kakao/link/callback").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/auth/naver/link/callback").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/auth/google/link/callback").permitAll()
 						.requestMatchers("/actuator/**").permitAll()
 						.anyRequest().authenticated())
 				.httpBasic(AbstractHttpConfigurer::disable)

@@ -35,11 +35,21 @@ public class NaverOAuthService {
 	}
 
 	public AuthUrlResponse createAuthorizeUrl(String requestedRedirectUri, String requestedReturnUri) {
+		return createAuthorizeUrl(null, requestedRedirectUri, requestedReturnUri);
+	}
+
+	public AuthUrlResponse createLinkAuthorizeUrl(
+			java.util.UUID userId, String requestedRedirectUri, String requestedReturnUri) {
+		return createAuthorizeUrl(userId, requestedRedirectUri, requestedReturnUri);
+	}
+
+	private AuthUrlResponse createAuthorizeUrl(
+			java.util.UUID linkUserId, String requestedRedirectUri, String requestedReturnUri) {
 		ensureConfigured();
 		String redirectUri = properties.resolveRedirectUri(requestedRedirectUri);
 		String returnUri = oAuthReturnUriValidator.resolveReturnUri(requestedReturnUri, OAuthProvider.NAVER);
 		String state = UUID.randomUUID().toString();
-		oAuthStateStore.saveState(state, OAuthProvider.NAVER, redirectUri, returnUri);
+		oAuthStateStore.saveState(state, OAuthProvider.NAVER, redirectUri, returnUri, linkUserId);
 		return new AuthUrlResponse(naverOAuthClient.buildAuthorizeUrl(state, redirectUri), state);
 	}
 
@@ -51,7 +61,22 @@ public class NaverOAuthService {
 		ensureConfigured();
 		var oauthState = oAuthStateStore.consumeState(request.state());
 		OAuthRedirectSupport.assertProvider(oauthState, OAuthProvider.NAVER);
+		if (oauthState.isLinkFlow()) {
+			throw new IllegalArgumentException("Invalid login state");
+		}
 
+		NaverUserResponse naverUser = fetchNaverUser(request, oauthState);
+		return oAuthUserProvisioner.issueAuthResponse(
+				OAuthProvider.NAVER, naverUser.id(), resolveNickname(naverUser));
+	}
+
+	public String resolveOAuthSubject(OAuthCallbackRequest request, com.kidschedule.api.auth.oauth.OAuthState oauthState) {
+		NaverUserResponse naverUser = fetchNaverUser(request, oauthState);
+		return naverUser.id();
+	}
+
+	private NaverUserResponse fetchNaverUser(OAuthCallbackRequest request, com.kidschedule.api.auth.oauth.OAuthState oauthState) {
+		ensureConfigured();
 		var tokenResponse =
 				naverOAuthClient.exchangeCodeForToken(request.code(), request.state(), oauthState.redirectUri());
 		if (tokenResponse == null || !StringUtils.hasText(tokenResponse.accessToken())) {
@@ -62,9 +87,7 @@ public class NaverOAuthService {
 		if (naverUser == null || !StringUtils.hasText(naverUser.id())) {
 			throw new IllegalStateException("Failed to fetch Naver user profile");
 		}
-
-		return oAuthUserProvisioner.issueAuthResponse(
-				OAuthProvider.NAVER, naverUser.id(), resolveNickname(naverUser));
+		return naverUser;
 	}
 
 	private String resolveNickname(NaverUserResponse naverUser) {
